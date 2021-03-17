@@ -2,6 +2,7 @@
 
 namespace App\Command;
 
+use App\Entity\Categorias;
 use App\Entity\Ativos;
 use App\Entity\TipoUso;
 use Doctrine\ORM\EntityManagerInterface;
@@ -50,9 +51,8 @@ class ImportadorAtivosCommand extends Command
 
         $io->info('Starting import, please wait...');
 
-        // Covert csv file content into interable php
+        // Coverte o csv em array php
         $rows = $this->getCsvRowsAsArray($filename);
-        // dd($rows);
         
         // tutorial progressBar: https://jonczyk.me/2017/09/20/make-cool-progressbar-symfony-command/
         $progressBar = new ProgressBar($output, count($rows));
@@ -66,42 +66,41 @@ class ImportadorAtivosCommand extends Command
         $progressBar->setRedrawFrequency(10);
         $progressBar->start();
 
-        $tipoUso = $this->entityManager->getRepository(TipoUso::class);
-        $ativo = $this->entityManager->getRepository(Ativos::class);
-
+        $tipoUsoEntity = $this->entityManager->getRepository(TipoUso::class);
+        $ativoEntity = $this->entityManager->getRepository(Ativos::class);
+        
         $existingCount = 0;
         $newCount = 0;
 
         foreach ($rows as $row) {
 
+            // remove espaços no inicio e final, de todos os valores do array
             $row = array_map(function($value){
                 return trim($value);
             }, $row);
-
-            // Seach type usage
-            $typeUsage = $tipoUso->findOneBy([
-                'nome' => $row["TIPO DE USO"]
-            ]);
             
-            // update record if found in the database
-            if ($existeAtivo = $ativo->findOneBy(['nome' => $row['NOME']])) {
+            // busca tipo de uso
+            $tipoUso = !empty($row["TIPO DE USO"]) ? $tipoUsoEntity->findOneBy(['nome' => $row["TIPO DE USO"]]) : null;
+            
+            // atualiza registro se existir no db
+            if ($existeAtivo = $ativoEntity->findOneBy(['nome' => $row['NOME']])) {
                 
-                $this->updateAtivo($existeAtivo, $typeUsage, $row);
+                $this->updateAtivo($existeAtivo, $tipoUso, $row);
                 $existingCount++;
 
             } else {
 
-                // create new record if not exists
-                $this->createNewAtivo($typeUsage, $row);
+                // cria registro
+                $this->createNewAtivo($tipoUso, $row);
                 $newCount++;
 
             }
             
             $progressBar->advance();
-            usleep(5000); // sleep a little bit
+            usleep(5000);
 
         }
-
+        
         $this->entityManager->flush();
 
         $progressBar->finish();
@@ -113,33 +112,66 @@ class ImportadorAtivosCommand extends Command
 
     }
 
-    private function createNewAtivo($typeUsage, $item)
+    private function createNewAtivo($tipoUso, $item)
     {
         
-        $ativo = new Ativos();
-        $ativo->setNome($item["NOME"])
+        $categoria = $this->createCategory($item['CATEGORIA']);
+
+        $entity = new Ativos();
+        $entity->setNome($item["NOME"])
             ->setAno(!empty($item["ANO"]) ? $item["ANO"] : 2020)
             ->setDescricaoDestaque($item["DESCRIÇÃO DESTAQUE"])
             ->setDescricao($item["DESCRIÇÃO"])
             ->setSugestaoPosologica($item["SUGESTÃO POSOLÓGICA"])
             ->setLinkArtigo($item["LINK ARTIGO"])
-            ->setFkTipoUsoId($typeUsage);
+            ->setFkTipoUsoId($tipoUso)
+            ->setFkCategoriasId($categoria);
 
-        $this->entityManager->persist($ativo);
+        $this->entityManager->persist($entity);
 
     }
 
-    private function updateAtivo($ativo, $typeUsage, $item)
+    private function updateAtivo($entity, $tipoUso, $item)
     {
-        $ativo->setNome($item["NOME"])
+
+        $categoria = $this->createCategory($item['CATEGORIA']);
+
+        $entity->setNome($item["NOME"])
             ->setAno(!empty($item["ANO"]) ? $item["ANO"] : 2020)
             ->setDescricaoDestaque($item["DESCRIÇÃO DESTAQUE"])
             ->setDescricao($item["DESCRIÇÃO"])
             ->setSugestaoPosologica($item["SUGESTÃO POSOLÓGICA"])
             ->setLinkArtigo($item["LINK ARTIGO"])
-            ->setFkTipoUsoId($typeUsage);
+            ->setFkTipoUsoId($tipoUso)
+            ->setFkCategoriasId($categoria);
 
-        $this->entityManager->persist($ativo);
+        $this->entityManager->persist($entity);
+    }
+
+    private function createCategory($categoriaNome)
+    {
+
+        if (empty($categoriaNome)) return null;
+        
+        // busca categoria
+        $entity = $this->entityManager->getRepository(Categorias::class)->findOneBy([
+            'nome' => $categoriaNome
+        ]);
+
+        // Se não existir, entao cria
+        if (!$entity) {
+
+            $categoria = new Categorias();
+            $categoria->setNome($categoriaNome);
+
+            $this->entityManager->persist($categoria);
+            $this->entityManager->flush();
+
+            return $categoria;
+        }
+
+        return $entity;
+
     }
 
     private function getCsvRowsAsArray($filename)

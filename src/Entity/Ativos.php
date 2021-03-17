@@ -29,7 +29,19 @@ class Ativos
     private $ano;
 
     /**
-     * @ORM\Column(type="text", nullable=true)
+     * @ORM\ManyToOne(targetEntity=TipoUso::class, inversedBy="ativos")
+     * @ORM\JoinColumn(name="fk_tipo_uso_id", referencedColumnName="id")
+     */
+    private $fkTipoUsoId;
+
+    /**
+     * @ORM\ManyToOne(targetEntity=Categorias::class, inversedBy="ativos")
+     * @ORM\JoinColumn(name="fk_categorias_id", referencedColumnName="id")
+     */
+    private $fkCategoriasId;
+    
+    /**
+     * @ORM\Column(name="descricao_destaque", type="text", nullable=true)
      */
     private $descricao_destaque;
 
@@ -39,20 +51,14 @@ class Ativos
     private $descricao;
 
     /**
-     * @ORM\Column(type="text", nullable=true)
+     * @ORM\Column(name="sugestao_posologica", type="text", nullable=true)
      */
     private $sugestao_posologica;
 
     /**
-     * @ORM\Column(type="text")
+     * @ORM\Column(name="link_artigo", type="text")
      */
     private $link_artigo;
-
-    /**
-     * @ORM\ManyToOne(targetEntity=TipoUso::class, inversedBy="ativos")
-     * @ORM\JoinColumn(name="fk_tipo_uso_id", referencedColumnName="id")
-     */
-    private $fkTipoUsoId;
 
     public function getId(): ?int
     {
@@ -79,6 +85,18 @@ class Ativos
     public function setAno(?int $ano): self
     {
         $this->ano = $ano;
+
+        return $this;
+    }
+
+    public function getFkTipoUsoId(): ?TipoUso
+    {
+        return $this->fkTipoUsoId;
+    }
+
+    public function setFkTipoUsoId(?TipoUso $fkTipoUsoId): self
+    {
+        $this->fkTipoUsoId = $fkTipoUsoId;
 
         return $this;
     }
@@ -131,15 +149,16 @@ class Ativos
         return $this;
     }
 
-    public function getFkTipoUsoId(): ?TipoUso
+    public function getFkCategoriasId(): ?Categorias
     {
-        return $this->fkTipoUsoId;
+        return $this->fkCategoriasId;
     }
 
-    public function setFkTipoUsoId(?TipoUso $fkTipoUsoId): self
+    public function setFkCategoriasId(?Categorias $fkCategoriasId): self
     {
-        $this->fkTipoUsoId = $fkTipoUsoId;
+        $this->fkCategoriasId = $fkCategoriasId;
 
         return $this;
     }
+
 }

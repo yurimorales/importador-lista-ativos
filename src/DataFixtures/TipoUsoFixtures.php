@@ -16,13 +16,15 @@ class TipoUsoFixtures extends Fixture
             'Insumo de uso externo'
         ];
 
+        $entity = $manager->getRepository(TipoUso::class);
+
         foreach ($types as $type) {
 
-            $checkExists = $manager->getRepository(TipoUso::class)->findOneBy([
+            $checkExists = $entity->findOneBy([
                 'nome' => $type
             ]);
 
-            if ($checkExists == null) {
+            if (!$checkExists) {
 
                 $typeUsage = (new TipoUso())
                     ->setNome($type);
