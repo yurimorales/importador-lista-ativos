@@ -74,6 +74,10 @@ class ImportadorAtivosCommand extends Command
 
         foreach ($rows as $row) {
 
+            $row = array_map(function($value){
+                return trim($value);
+            }, $row);
+
             // Seach type usage
             $typeUsage = $tipoUso->findOneBy([
                 'nome' => $row["TIPO DE USO"]
